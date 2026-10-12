@@ -50,12 +50,3 @@ android/build/
 **/android/build/
 **/android/.gradle/
 
-homeScreen.dart
-ResopnsiveCarousel.dart
-forgotPassword.dart
-loginLogoutScreen.dart
-signupScreen.dart
-addRent.dart
-user_service.dart
-userModel.dart
-widget.dart

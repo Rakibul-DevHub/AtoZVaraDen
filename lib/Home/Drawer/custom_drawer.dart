@@ -95,7 +95,18 @@ class _CustomDrawerState extends State<CustomDrawer> {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => Profile(userId: currentUserId)),
+                      MaterialPageRoute(builder: (context) => Profile(userId: currentUserId, initialTabIndex: 0)),
+                    ).then((_) => setState(() {}));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined, color: Colors.teal),
+                  title: const Text('Settings'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => Profile(userId: currentUserId, initialTabIndex: 1)),
                     ).then((_) => setState(() {}));
                   },
                 ),
