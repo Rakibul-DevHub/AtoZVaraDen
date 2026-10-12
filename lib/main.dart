@@ -1,38 +1,39 @@
-import 'package:atoz_vara_den/Home/homeScreen.dart';
-import 'package:device_preview/device_preview.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'Splash/splashScreen.dart';
-import 'Firebase/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  // runApp( DevicePreview(builder: (context) => const MyApp()));
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase initialization notice: $e');
+  }
   runApp(const MyApp());
 }
 
-
-
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: SplashScreen());
-        // home: Homescreen());
-
+    return MaterialApp(
+      title: 'A to Z Vara Den - Rental Platform',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal,
+          primary: Colors.teal,
+        ),
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF9FBFB),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+      ),
+      home: const SplashScreen(),
+    );
   }
 }
-
-
-

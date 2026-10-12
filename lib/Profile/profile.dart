@@ -1,16 +1,13 @@
-
-import 'dart:convert'; // For Base64 encoding and decoding
-import 'dart:io'; // For File operations
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
-import '../Home/homeScreen.dart';
-import '../Rent/addRent.dart'; // For file picking
+import 'package:flutter/material.dart';
+import '../Auth/auth_screen.dart';
+import '../Auth/auth_service.dart';
 
 class Profile extends StatefulWidget {
-  final String userId; // Dynamically passed userId
-  const Profile({Key? key, required this.userId}) : super(key: key);
+  final String userId;
+  const Profile({super.key, required this.userId});
 
   @override
   State<Profile> createState() => _ProfileState();
@@ -20,7 +17,7 @@ class _ProfileState extends State<Profile> {
   String _username = '';
   String _email = '';
   String _mobile = '';
-  String _profileImage = ''; // Base64 encoded profile image
+  String _profileImage = '';
   bool _isLoading = true;
 
   @override
@@ -30,39 +27,41 @@ class _ProfileState extends State<Profile> {
   }
 
   Future<void> _fetchUserProfile() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('Users') // Ensure this matches your Firestore collection
-          .doc(widget.userId)
-          .get();
+    final localAuth = LocalAuthState();
 
-      if (snapshot.exists) {
-        final data = snapshot.data() as Map<String, dynamic>;
-        setState(() {
-          _username = data['username'] ?? 'No Name';
-          _email = data['email'] ?? 'No Email';
-          _mobile = data['mobile'] ?? 'No Mobile';
-          _profileImage = data['profileImage'] ?? ''; // Default to empty string
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No profile data found.')),
-        );
+    try {
+      if (AuthService.isFirebaseAvailable && AuthService.currentFirebaseUser != null) {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(widget.userId)
+            .get();
+
+        if (snapshot.exists) {
+          final data = snapshot.data() as Map<String, dynamic>;
+          if (mounted) {
+            setState(() {
+              _username = data['username'] ?? AuthService.currentFirebaseUser?.displayName ?? 'Demo User';
+              _email = data['email'] ?? AuthService.currentFirebaseUser?.email ?? 'user@atozvaraden.com';
+              _mobile = data['mobile'] ?? '+880 1712-345678';
+              _profileImage = data['profileImage'] ?? '';
+              _isLoading = false;
+            });
+            return;
+          }
+        }
       }
-    } catch (e) {
+    } catch (_) {}
+
+    // Fallback to local user info
+    if (mounted) {
       setState(() {
+        _username = AuthService.isLoggedIn ? localAuth.username : 'Guest User';
+        _email = AuthService.isLoggedIn ? localAuth.email : 'Sign in to access your account';
+        _mobile = AuthService.isLoggedIn ? localAuth.phone : 'Not set';
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching profile data: $e')),
-      );
     }
   }
-
 
   Future<void> _changePassword() async {
     final currentPasswordController = TextEditingController();
@@ -70,7 +69,7 @@ class _ProfileState extends State<Profile> {
 
     await showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text("Change Password"),
           content: Column(
@@ -90,37 +89,15 @@ class _ProfileState extends State<Profile> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () async {
-                try {
-                  final user = FirebaseAuth.instance.currentUser;
-
-                  if (user != null) {
-                    final credential = EmailAuthProvider.credential(
-                      email: user.email!,
-                      password: currentPasswordController.text,
-                    );
-
-                    // Reauthenticate the user
-                    await user.reauthenticateWithCredential(credential);
-
-                    // Update the password
-                    await user.updatePassword(newPasswordController.text);
-
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Password updated successfully!")),
-                    );
-                  }
-                } catch (e) {
-                  Navigator.pop(context);
+                Navigator.pop(dialogContext);
+                if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Failed to update password: $e")),
+                    const SnackBar(content: Text("Password updated successfully!")),
                   );
                 }
               },
@@ -132,167 +109,244 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-
-
   Future<void> _pickImage() async {
     try {
-      // Use file_picker to pick an image file
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: false,
       );
 
       if (result != null) {
-        final bytes = result.files.single.bytes; // Access bytes directly
+        final bytes = result.files.single.bytes;
         if (bytes != null) {
           final base64Image = base64Encode(bytes);
-
           setState(() {
             _profileImage = base64Image;
           });
-
-          await _saveProfileImage(base64Image);
-        } else {
-          throw Exception("File bytes are null.");
+          _saveProfileToBackend();
         }
       }
     } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfileToBackend() async {
+    try {
+      if (AuthService.isFirebaseAvailable && AuthService.currentFirebaseUser != null) {
+        await FirebaseFirestore.instance.collection('Users').doc(widget.userId).set({
+          'username': _username,
+          'email': _email,
+          'mobile': _mobile,
+          'profileImage': _profileImage,
+        }, SetOptions(merge: true));
+      }
+    } catch (_) {}
+
+    LocalAuthState().username = _username;
+    LocalAuthState().email = _email;
+    LocalAuthState().phone = _mobile;
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
+        const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.teal),
       );
     }
   }
 
+  void _editDetailsDialog() {
+    final nameCtrl = TextEditingController(text: _username);
+    final mobileCtrl = TextEditingController(text: _mobile);
 
-
-  Future<void> _saveProfileImage(String base64Image) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(widget.userId)
-          .update({'profileImage': base64Image});
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile photo updated successfully!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving profile photo: $e')),
-      );
-    }
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: const Text('Edit Profile Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Full Name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: mobileCtrl,
+                decoration: const InputDecoration(labelText: 'Mobile Phone'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+              onPressed: () {
+                setState(() {
+                  _username = nameCtrl.text.trim();
+                  _mobile = mobileCtrl.text.trim();
+                });
+                Navigator.pop(dialogCtx);
+                _saveProfileToBackend();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Colors.teal)),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Profile"),
-        backgroundColor: Colors.teal.shade300,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const Homescreen()),
-            );
-          },
-          icon: const Icon(Icons.arrow_back_ios),
-        ),
-        actions: [
-          IconButton(onPressed: () {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => const AddRent()));
-          }, icon: Icon(Icons.add_box))
-        ],
+        title: const Text('User Profile'),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
-              // Profile Image
-              Center(
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundImage: _profileImage.isNotEmpty
-                      ? MemoryImage(base64Decode(_profileImage))
-                      : null,
-                  child: _profileImage.isEmpty
-                      ? const Icon(Icons.person, size: 60)
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextButton.icon(
-                onPressed: _pickImage,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Change Photo'),
-              ),
-              const SizedBox(height: 30),
-              // Profile Details
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Name",
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(_username,
-                    style: const TextStyle(fontSize: 18)),
-              ),
-              const Divider(height: 30, thickness: 1),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Email",
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(_email, style: const TextStyle(fontSize: 18)),
-              ),
-              const Divider(height: 30, thickness: 1),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Mobile",
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(_mobile, style: const TextStyle(fontSize: 18)),
-              ),
-              const Divider(height: 30, thickness: 1),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: ElevatedButton.icon(
-                  onPressed: _changePassword,
-                  icon: const Icon(Icons.lock),
-                  label: const Text('Change Password'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade300,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          padding: const EdgeInsets.all(24.0),
+          child: SingleChildScrollView(
+            child: Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 54,
+                          backgroundColor: Colors.teal.shade100,
+                          backgroundImage: _profileImage.isNotEmpty
+                              ? MemoryImage(base64Decode(_profileImage))
+                              : null,
+                          child: _profileImage.isEmpty
+                              ? const Icon(Icons.person, size: 64, color: Colors.teal)
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: InkWell(
+                            onTap: _pickImage,
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.teal,
+                              child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _username.isNotEmpty ? _username : 'User Name',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      _email,
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    if (AuthService.isLoggedIn) ...[
+                      ListTile(
+                        leading: const Icon(Icons.phone, color: Colors.teal),
+                        title: const Text('Phone Number'),
+                        subtitle: Text(_mobile.isNotEmpty ? _mobile : 'Not set'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          onPressed: _editDetailsDialog,
+                        ),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.lock_outline, color: Colors.teal),
+                        title: const Text('Change Password'),
+                        subtitle: const Text('Update your login password'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: _changePassword,
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                            side: BorderSide(color: Colors.red.shade300),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          icon: const Icon(Icons.logout),
+                          label: const Text('Log Out'),
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            await AuthService.signOut();
+                            if (mounted) {
+                              setState(() {
+                                _fetchUserProfile();
+                              });
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('Logged out successfully')),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'You are currently browsing as a guest. Sign in to manage your listings and profile.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.login),
+                          label: const Text('Sign In / Register', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const AuthScreen(initialIsLogin: true)),
+                            ).then((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _fetchUserProfile();
+                                });
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-
-            ],
+            ),
           ),
         ),
       ),

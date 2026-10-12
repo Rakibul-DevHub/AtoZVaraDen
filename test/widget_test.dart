@@ -1,30 +1,41 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:atoz_vara_den/data/sample_data.dart';
 import 'package:atoz_vara_den/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('App renders SplashScreen with branding and tagline', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify splash screen elements
+    expect(find.text('A to Z Vara Den'), findsOneWidget);
+    expect(find.text('ভাড়া দিন ও নিন সহজে'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('ListingRepository manages rental properties correctly', () {
+    final repo = ListingRepository();
+    expect(repo.listings.isNotEmpty, true);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    final initialCount = repo.listings.length;
+    final newProperty = {
+      'id': 'test_123',
+      'title': 'Test Flat in Banani',
+      'description': 'A nice 2-bed apartment',
+      'category': 'Family Flat',
+      'bedroom': '2 Beds',
+      'bathroom': '2 Baths',
+      'price': 25000.0,
+      'address': 'Road 11, Banani, Dhaka',
+      'contact_info': '+880 1700-000000',
+      'imageUrls': <String>[],
+      'images': <String>[],
+    };
+
+    repo.addListing(newProperty);
+    expect(repo.listings.length, initialCount + 1);
+    expect(repo.listings.first['id'], 'test_123');
+    expect(repo.listings.first['title'], 'Test Flat in Banani');
   });
 }

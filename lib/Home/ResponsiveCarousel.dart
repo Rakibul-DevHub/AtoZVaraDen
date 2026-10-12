@@ -2,68 +2,132 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
 class ResponsiveCarousel extends StatelessWidget {
+  const ResponsiveCarousel({super.key});
+
+  final List<Map<String, String>> _bannerItems = const [
+    {
+      'imageUrl': 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop',
+      'title': 'Find Premium Family Apartments',
+      'subtitle': 'Verified rental homes with modern amenities across the city',
+    },
+    {
+      'imageUrl': 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop',
+      'title': 'Commercial & Office Spaces',
+      'subtitle': 'Ready workstations and executive offices for growing businesses',
+    },
+    {
+      'imageUrl': 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&auto=format&fit=crop',
+      'title': 'Affordable Bachelor & Sublet Seats',
+      'subtitle': 'Furnished rooms with utilities included for students & professionals',
+    },
+    {
+      'imageUrl': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format&fit=crop',
+      'title': 'Luxury Condos & Duplex Houses',
+      'subtitle': 'Experience superior living in prime locations',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // Determine the screen width and height
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
 
-
-    // Set height based on screen width
     double carouselHeight;
-    double carouselWidth;
+    double viewportFraction;
+
     if (screenWidth <= 600) {
-      // Mobile screen
-      carouselHeight = screenHeight / 4;
-      carouselWidth = screenWidth * 0.9; // Occupy 90% of the width
-    }
-    else if (screenWidth <= 1024) {
-      // Tablet screen
-      carouselHeight = screenHeight / 3;
-      carouselWidth = screenWidth * 0.85; // Occupy 85% of the width
-    }
-    else {
-      // PC screen
-      carouselHeight = screenHeight / 2.3;
-      carouselWidth = screenWidth * 0.7; // Occupy 80% of the width
+      carouselHeight = 190;
+      viewportFraction = 0.92;
+    } else if (screenWidth <= 1024) {
+      carouselHeight = 260;
+      viewportFraction = 0.88;
+    } else {
+      carouselHeight = 340;
+      viewportFraction = 0.80;
     }
 
-    return SizedBox(
-      width: carouselWidth, // Dynamic width
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: CarouselSlider(
-        items: [
-          Image.asset(
-            'assets/images/imageAutoScroll/hostel.jpg',
-            fit: BoxFit.cover,
-            width: carouselWidth, // Set dynamic width for each image
-          ),
-          Image.asset(
-            'assets/images/imageAutoScroll/hotel.jpg',
-            fit: BoxFit.cover,
-            width: carouselWidth, // Set dynamic width for each image
-          ),
-          Image.asset(
-            'assets/images/imageAutoScroll/house_balcony.jpg',
-            fit: BoxFit.cover,
-            width: carouselWidth, // Set dynamic width for each image
-          ),
-          Image.asset(
-            'assets/images/imageAutoScroll/lift.jpg',
-            fit: BoxFit.cover,
-            width: carouselWidth, // Set dynamic width for each image
-          ),
-          Image.asset(
-            'assets/images/imageAutoScroll/meeting_room.jpg',
-            fit: BoxFit.cover,
-            width: carouselWidth, // Set dynamic width for each image
-          ),
-        ],
+        items: _bannerItems.map((item) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  item['imageUrl']!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.teal.shade700,
+                      child: const Center(
+                        child: Icon(Icons.apartment, size: 64, color: Colors.white70),
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    );
+                  },
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black.withValues(alpha: 0.75),
+                        Colors.black.withValues(alpha: 0.2),
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: 20,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        item['title']!,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: screenWidth <= 600 ? 18 : 24,
+                          shadows: const [
+                            Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 4),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item['subtitle']!,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: screenWidth <= 600 ? 12 : 14,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
         options: CarouselOptions(
-          height: carouselHeight, // Set height dynamically
-          autoPlay: true, // Enable auto-scroll
-          enlargeCenterPage: true, // Highlight the center image
-          viewportFraction: 1.0, // Full width for each image
-          aspectRatio: carouselWidth / carouselHeight, // Dynamic aspect ratio
+          height: carouselHeight,
+          autoPlay: true,
+          autoPlayInterval: const Duration(seconds: 4),
+          enlargeCenterPage: true,
+          viewportFraction: viewportFraction,
         ),
       ),
     );

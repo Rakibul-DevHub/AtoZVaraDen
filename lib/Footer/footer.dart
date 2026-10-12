@@ -1,81 +1,90 @@
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class Footer extends StatelessWidget {
   const Footer({super.key});
 
+  void _showNotice(BuildContext context, String title) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$title section coming soon.'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity, // Ensures the footer takes full width of the screen
-      color: Colors.teal.shade200, // Background color for the footer
-      padding: const EdgeInsets.all(3), // Padding around the footer content
+      width: double.infinity,
+      color: Colors.teal.shade800,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Shrink-wrap the content
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            "© 2024 Vhara Din. All rights reserved.",
-            style: TextStyle(fontSize: 14, color: Colors.white),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 3), // Spacing between elements
-          Wrap(
-            alignment: WrapAlignment.center, // Center the wrapped items
-            spacing: 20, // Space between items horizontally
-            runSpacing: 3, // Space between items vertically
-            children: [
-              FooterLink(
-                text: "Privacy Policy",
-                onPressed: () {
-                  // Handle privacy policy click
-                  print("Privacy Policy clicked!");
-                },
-              ),
-              FooterLink(
-                text: "Terms of Service",
-                onPressed: () {
-                  // Handle terms of service click
-                  print("Terms of Service clicked!");
-                },
-              ),
-              FooterLink(
-                text: "Contact Us",
-                onPressed: () {
-                  // Handle contact us click
-                  if (kDebugMode) {
-                    print("Contact Us clicked!");
-                  }
-                },
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.home_work_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                "A to Z Vara Den",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 6),
+          const Text(
+            "© 2024-2026 A to Z Vara Den. All rights reserved.",
+            style: TextStyle(fontSize: 13, color: Colors.white70),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
           Wrap(
             alignment: WrapAlignment.center,
-            spacing: 20, // Space between icons horizontally
-            runSpacing: 3, // Space between icons vertically
+            spacing: 20,
+            runSpacing: 8,
+            children: [
+              FooterLink(
+                text: "Privacy Policy",
+                onPressed: () => _showNotice(context, "Privacy Policy"),
+              ),
+              FooterLink(
+                text: "Terms of Service",
+                onPressed: () => _showNotice(context, "Terms of Service"),
+              ),
+              FooterLink(
+                text: "Help & FAQ",
+                onPressed: () => _showNotice(context, "Help & FAQ"),
+              ),
+              FooterLink(
+                text: "Contact Support",
+                onPressed: () => _showNotice(context, "Contact Support"),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
             children: [
               IconButton(
-                onPressed: () {
-                  // Handle Facebook click
-                  print("Facebook clicked!");
-                },
-                icon: const Icon(Icons.facebook, color: Colors.white),
+                onPressed: () => _showNotice(context, "Facebook"),
+                icon: const Icon(Icons.facebook, color: Colors.white70),
+                tooltip: 'Facebook',
               ),
               IconButton(
-                onPressed: () {
-                  // Handle Twitter click
-                  print("Twitter clicked!");
-                },
-                icon: const Icon(Icons.alternate_email, color: Colors.white),
+                onPressed: () => _showNotice(context, "Email"),
+                icon: const Icon(Icons.email_outlined, color: Colors.white70),
+                tooltip: 'Email Us',
               ),
               IconButton(
-                onPressed: () {
-                  // Handle LinkedIn click
-                  print("LinkedIn clicked!");
-                },
-                icon: const Icon(Icons.link, color: Colors.white),
+                onPressed: () => _showNotice(context, "Share"),
+                icon: const Icon(Icons.share, color: Colors.white70),
+                tooltip: 'Share App',
               ),
             ],
           ),
@@ -87,28 +96,22 @@ class Footer extends StatelessWidget {
 
 class FooterLink extends StatelessWidget {
   final String text;
-  final Function()? onPressed;
+  final VoidCallback? onPressed;
 
   const FooterLink({super.key, required this.text, this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onPressed,
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 14,
-          color: Colors.white,
-          decoration: TextDecoration.underline, // Makes the link look clickable
+          fontSize: 13,
+          color: Colors.white70,
+          decoration: TextDecoration.underline,
         ),
       ),
     );
   }
 }
-
-
-
-
-//todo: fixing
-

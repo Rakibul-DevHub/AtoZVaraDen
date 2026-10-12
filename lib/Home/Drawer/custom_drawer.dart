@@ -1,251 +1,177 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:convert';
 
-import '../../LoginOut_Signup/signupScreen.dart';
-import '../../LoginOut_Signup/loginLogoutScreen.dart';
+import '../../Auth/auth_screen.dart';
+import '../../Auth/auth_service.dart';
+import '../../Footer/footer.dart';
+import '../../Message/message_list.dart';
 import '../../Profile/profile.dart';
-import '../../Rent/addRent.dart';
-import '../../Footer/footer.dart'; // Import Footer widget
+import '../AddRent/add_rent_screen.dart';
 
-class CustomDrawer extends StatelessWidget {
+class CustomDrawer extends StatefulWidget {
   const CustomDrawer({super.key});
 
   @override
+  State<CustomDrawer> createState() => _CustomDrawerState();
+}
+
+class _CustomDrawerState extends State<CustomDrawer> {
+  @override
   Widget build(BuildContext context) {
+    final bool isUserLoggedIn = AuthService.isLoggedIn;
+    final String currentUserId = AuthService.currentUserId;
+    final String currentUsername = AuthService.currentUsername;
+    final String currentUserEmail = AuthService.currentUserEmail;
+
     return Drawer(
       child: Column(
         children: [
           // Drawer Header
-          DrawerHeader(
-            padding: EdgeInsets.zero,
-            decoration: const BoxDecoration(
-              color: Colors.teal,
+          UserAccountsDrawerHeader(
+            onDetailsPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Profile(userId: currentUserId)),
+              ).then((_) => setState(() {}));
+            },
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.teal.shade600, Colors.teal.shade800],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            child: Row(
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, size: 44, color: Colors.teal.shade700),
+            ),
+            accountName: Text(
+              currentUsername,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            accountEmail: Text(
+              currentUserEmail,
+              style: const TextStyle(fontSize: 13, color: Colors.white70),
+            ),
+          ),
+
+          // Drawer Menu Items
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
-                // Profile Image
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: FutureBuilder<DocumentSnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('Users')
-                        .doc(FirebaseAuth.instance.currentUser?.uid)
-                        .get(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircleAvatar(
-                          radius: 40,
-                          child: CircularProgressIndicator(),
-                        );
-                      }
-
-                      if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
-                        return const CircleAvatar(
-                          radius: 40,
-                          child: Icon(Icons.person, size: 40),
-                        );
-                      }
-
-                      final data = snapshot.data!.data() as Map<String, dynamic>;
-                      final profileImage = data['profileImage'] ?? '';
-
-                      return CircleAvatar(
-                        radius: 40,
-                        backgroundImage: profileImage.isNotEmpty
-                            ? MemoryImage(base64Decode(profileImage))
-                            : null,
-                        child: profileImage.isEmpty
-                            ? const Icon(Icons.person, size: 40)
-                            : null,
+                ListTile(
+                  leading: const Icon(Icons.home, color: Colors.teal),
+                  title: const Text('Home'),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.add_circle, color: Colors.teal),
+                  title: const Text('Post Rental Ad'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AddRentScreen()),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.chat_outlined, color: Colors.teal),
+                  title: const Text('Messages / Chats'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MessageListScreen()),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.person_outline, color: Colors.teal),
+                  title: const Text('Profile'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => Profile(userId: currentUserId)),
+                    ).then((_) => setState(() {}));
+                  },
+                ),
+                const Divider(),
+                if (!isUserLoggedIn) ...[
+                  ListTile(
+                    leading: const Icon(Icons.login, color: Colors.teal),
+                    title: const Text('Login'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AuthScreen(initialIsLogin: true)),
+                      ).then((_) => setState(() {}));
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.person_add_alt, color: Colors.teal),
+                    title: const Text('Sign Up'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AuthScreen(initialIsLogin: false)),
+                      ).then((_) => setState(() {}));
+                    },
+                  ),
+                ] else ...[
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.redAccent),
+                    title: const Text('Logout'),
+                    onTap: () async {
+                      final navigator = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
+                      await AuthService.signOut();
+                      if (!mounted) return;
+                      setState(() {});
+                      navigator.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('Logged out successfully')),
                       );
                     },
                   ),
+                ],
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.language, color: Colors.teal),
+                  title: const Text('Official Website'),
+                  onTap: () async {
+                    const url = 'https://www.net.twistbazar.com/';
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  },
                 ),
-
-                // Username
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('Users')
-                          .doc(FirebaseAuth.instance.currentUser?.uid)
-                          .get(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const SizedBox.shrink();
-                        }
-
-                        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
-                          return const Text(
-                            "User Not Logged In",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        }
-
-                        final data = snapshot.data!.data() as Map<String, dynamic>;
-                        final username = data['username'] ?? 'No Name';
-
-                        return Text(
-                          username,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        );
-                      },
-                    ),
-                  ),
+                ListTile(
+                  leading: const Icon(Icons.android, color: Colors.green),
+                  title: const Text('Get Android APK'),
+                  onTap: () async {
+                    const url =
+                        'https://github.com/Rakibul-E404/AtoZ_Vara_Den/releases/download/v1.0-beta.1/AtoZVaraDen.android.apk';
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  },
                 ),
               ],
             ),
           ),
 
-          // Drawer Menu Items
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Profile'),
-            onTap: () async {
-              final userId = FirebaseAuth.instance.currentUser?.uid;
-              if (userId != null) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => Profile(userId: userId)),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("User is not logged in")),
-                );
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.add_box),
-            title: const Text('Add Rent'),
-            onTap: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const AddRent()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.move_up_sharp),
-            title: const Text('Sign up'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SignupScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.input),
-            title: const Text('Login'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const loginLogoutScreen()),
-              );
-            },
-          ),
-
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
-            onTap: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const loginLogoutScreen()),
-                    (route) => false,
-              );
-            },
-          ),
-
-
-
-
-          // Divider
-          const Divider(),
-
-
-          if (!kIsWeb && Platform.isIOS)
-          ListTile(
-            leading: const Icon(Icons.web),
-            title: const Text('Open in Web'),
-            onTap: () async {
-              const url = 'https://www.net.twistbazar.com/'; // Replace with actual URL
-              if (await canLaunchUrl(Uri.parse(url))) {
-                await launchUrl(Uri.parse(url));
-              } else {
-                throw 'Could not launch $url';
-              }
-            },
-          ),
-          if (!kIsWeb && Platform.isAndroid)
-
-
-          ListTile(
-            leading: const Icon(Icons.web),
-            title: const Text('Open in Web'),
-            onTap: () async {
-              const url = 'https://www.net.twistbazar.com/'; // Replace with actual URL
-              if (await canLaunchUrl(Uri.parse(url))) {
-                await launchUrl(Uri.parse(url));
-              } else {
-                throw 'Could not launch $url';
-              }
-            },
-          ),
-
-
-          ListTile(
-            leading: const Icon(Icons.android),
-            title: const Text('Install Android App'),
-            onTap: () async {
-              const url = 'https://github.com/Rakibul-E404/AtoZ_Vara_Den/releases/download/v1.0-beta.1/AtoZVaraDen.android.apk';
-              if (await canLaunchUrl(Uri.parse(url))) {
-                await launchUrl(Uri.parse(url));
-              } else {
-                throw 'Could not launch $url';
-              }
-            },
-          ),
-
-          ListTile(
-            leading: const Icon(Icons.apple),
-            title: const Text('Install iOS App'),
-            onTap: ()  {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('iOS will be available soon!'), // Wrap the Text widget inside the SnackBar
-                ),
-              );
-            },
-          ),
-
-          // Footer Section
-          const Expanded(child: SizedBox()), // Pushes footer to the bottom
-          const Footer(), // Your existing footer widget
+          // Footer
+          const Footer(),
         ],
       ),
     );
   }
 }
-
-
-

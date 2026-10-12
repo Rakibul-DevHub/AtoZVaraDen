@@ -9,58 +9,65 @@ class MessageListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.teal.shade300,
-        title: const Text("Chats"),
-        actions: [
-          IconButton(
-            onPressed: () {
-              // Handle search action
-              print("Search clicked!");
-            },
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            onPressed: () {
-              // Handle more options
-              print("More clicked!");
-            },
-            icon: const Icon(Icons.more_vert),
-          ),
-        ],
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        title: const Text("Rental Inquiries & Chats"),
       ),
-      body: ListView.builder(
-        itemCount: chatUsers.length,
-        itemBuilder: (context, index) {
-          final chatUser = chatUsers[index];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.teal.shade300,
-              child: Text(chatUser.name[0]), // Display the first letter of the name
-            ),
-            title: Text(chatUser.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(chatUser.message, overflow: TextOverflow.ellipsis),
-            trailing: Text(chatUser.time, style: const TextStyle(fontSize: 12)),
-            onTap: () {
-              // Navigate to the MessageScreen when tapped
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MessageScreen(),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: ListView.separated(
+            itemCount: chatUsers.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final chatUser = chatUsers[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.teal.shade400,
+                  foregroundColor: Colors.white,
+                  child: Text(
+                    chatUser.name[0],
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
+                title: Text(
+                  chatUser.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  chatUser.message,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Text(
+                  chatUser.time,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MessageScreen(),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.teal.shade300,
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
         onPressed: () {
-          // Handle new chat action
-          print("New chat clicked!");
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MessageScreen(),
+            ),
+          );
         },
         child: const Icon(Icons.chat),
       ),
     );
   }
 }
-
